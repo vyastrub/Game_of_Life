@@ -23,7 +23,6 @@ Game_loop::~Game_loop()
 void Game_loop::input_menu()
 {
 	MEVENT event1;
-	std::list<Point>::iterator it;
 	bool unique;
 
 	clear();
@@ -47,8 +46,8 @@ void Game_loop::input_menu()
 				if (event1.bstate && BUTTON1_PRESSED)
 				{
 					Point tmp(event1.x, event1.y);
-					for (it = input.begin(); it != input.end(); it++)
-						if ((*it) == tmp)
+					for (auto i: input)
+						if (i == tmp)
 							unique = false;
 					if (unique)
 					{
@@ -68,9 +67,8 @@ void Game_loop::render()
 {
 	clear();
 	attron(A_REVERSE);
-	std::list<Cell>::iterator it;
-	for (it = cells.begin(); it != cells.end(); it++)
-		mvaddch((*it).get_coord().y, (*it).get_coord().x, ' ');
+	for (auto i: cells)
+		mvaddch(i.get_coord().y, i.get_coord().x, ' ');
 	attroff(A_REVERSE);
 	refresh();
 }
@@ -79,10 +77,14 @@ void Game_loop::game_over()
 {
 	int c;
 
-	clear();
-	mvprintw(height / 2 - 1, width / 2 - 5, "GAME OVER");
-	mvprintw(height / 2, width / 2 - 12, "Press Enter to try again");
-	mvprintw(height / 2 + 1, width / 2 - 9, "Press Esc to EXIT");
+	clear();                                                 
+	mvprintw(height / 2 - 3, width / 2 - 28, "  ____    _    __  __ _____    _____     _______ ____   ");
+	mvprintw(height / 2 - 2, width / 2 - 28, " / ___|  / \\  |  \\/  | ____|  / _ \\ \\   / | ____|  _ \\  ");
+	mvprintw(height / 2 - 1, width / 2 - 28, "| |  _  / _ \\ | |\\/| |  _|   | | | \\ \\ / /|  _| | |_) | ");
+	mvprintw(height / 2,     width / 2 - 28, "| |_| |/ ___ \\| |  | | |___  | |_| |\\ V / | |___|  _ <  ");
+	mvprintw(height / 2 + 1, width / 2 - 28, " \\____/_/   \\_|_|  |_|_____|  \\___/  \\_/  |_____|_| \\_\\ ");                                                   
+	mvprintw(height / 2 + 2, width / 2 - 12, "Press Enter to try again");
+	mvprintw(height / 2 + 3, width / 2 - 9, "Press Esc to EXIT");
 	refresh();
 
 	while (1)
@@ -104,14 +106,12 @@ bool Game_loop::is_alive(Cell const & current_cell) const
 		return false;
 
 	int neighbours = 0;
-	std::list<Cell>::const_iterator it = cells.begin();
-	while (it != cells.end())
+	for (auto  & i: cells)
 	{
-		if (*it != current_cell)
-			if (current_cell.get_coord() <= (*it).get_coord())
-				if (!((*it).get_coord().out_of_map(0, 0, width, height)))
+		if (i != current_cell)
+			if (current_cell.get_coord() <= i.get_coord())
+				if (!(i.get_coord().out_of_map(0, 0, width, height)))
 					neighbours++;
-		it++;
 	}
 	if (neighbours == 2 || neighbours == 3)
 		return true;
@@ -123,25 +123,21 @@ void Game_loop::push_point(int x, int y)
 {
 	Point tmp(x, y);
 
-	std::list<Cell>::iterator it = cells.begin();
-	while (it != cells.end())
+	for (auto & i: cells)
 	{
-		if ((*it).get_coord() == tmp)
+		if (i.get_coord() == tmp)
 			return;
-		it++;
 	}
-
-	for (int i = 0; i < size; i++)
+	
+	for (auto & i : point_map)
 	{
-		if (to_add[i] == tmp)
+		if (i.second == tmp)
 		{
-			point_occasions[i]++;
+			i.first++;
 			return;
 		}
 	}
-	to_add.push_back(tmp);
-	point_occasions.push_back(1);
-	size++;
+	point_map.push_back(std::make_pair(1, tmp));
 }
 
 void Game_loop::collect_points(Cell const & current_cell)
@@ -176,48 +172,37 @@ void Game_loop::collect_points(Cell const & current_cell)
 
 void Game_loop::update_population()
 {
-	std::list<Cell>::iterator it;
-
 	/*--- Searching for dead and borned cells --- */
-	for (it = cells.begin(); it != cells.end(); it++)
+	for (auto & i: cells)
 	{
-		collect_points(*it);
-		if (!is_alive(*it))
-			(*it).kill();
+		collect_points(i);
+		if (!is_alive(i))
+			i.kill();
 	}
 
 	/* ----- Deleting old cells ----- */
-	for (it = cells.begin(); it != cells.end(); )
+	for (auto it = cells.begin(); it != cells.end(); )
 	{
 		if ((*it).cell_is_dead())
-			cells.erase(it++);
+			cells.erase(it++ );
 		else
-			it++;
+			++it;
 	}
 
 	/* ----- Creating new cells ----- */
-	for (int i = 0; i < size; i++)
+	for (auto i : point_map)
 	{
-		if (point_occasions[i] == 3)
-			cells.push_back(to_add[i]);
+		if (i.first == 3)
+			cells.push_back(i.second);
 	}
-
-	to_add.clear();
-	point_occasions.clear();
-	size = 0;
+	point_map.clear();
 }
 
 
 void Game_loop::init_cells()
 {
-	size = 0;
-
-	std::list<Point>::const_iterator it = input.begin();
-	while (it != input.end())
-	{
-		cells.push_back(*it);
-		it++;
-	}
+	for (auto & i : input)
+		cells.push_back(i);
 	input.clear();
 }
 

@@ -2,7 +2,6 @@
 #define NCURSES_MOUSE_VERSION
 
 #include <list>
-#include <vector>
 #include <windows.h>
 #include "Cell.hpp"
 #include "curses.h"
@@ -31,10 +30,8 @@ private:
 	int height;
 	int width;
 
-	std::list<Point>	input;  
-	std::list<Cell>		cells;
-	std::vector<Point>	to_add;
-	std::vector<int>	point_occasions;
-	int					size;
+	std::list<Point>					input;  
+	std::list<Cell>						cells;
+	std::list<std::pair<int, Point>>	point_map;
 };	
 
