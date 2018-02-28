@@ -3,6 +3,7 @@
 
 #include <list>
 #include <windows.h>
+#include <thread>
 #include "Cell.hpp"
 #include "curses.h"
 
@@ -19,7 +20,8 @@ public:
 	/*	----	logic part	 ----	*/	
 	bool is_alive(Cell const & current_cell) const;		// Check if cell still alive on next generation
 	void push_point(int x, int y);						/*-----------------------------------------*/
-	void collect_points(Cell const & current_cell);		/*Add empty point to potentional cell stack*/
+	void collect_points();								/*Add empty point to potentional cell stack*/
+	void find_dead();									/*Find dead cells*/
 	void update_population();							/*Remowing dead cells and add borned*/
 
 	void init_cells();  

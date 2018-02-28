@@ -71,12 +71,15 @@ void Game_loop::render()
 		mvaddch(i.get_coord().y, i.get_coord().x, ' ');
 	attroff(A_REVERSE);
 	refresh();
+	Sleep(1000);
 }
 
 void Game_loop::game_over()
 {
 	int c;
 
+	input.clear();
+	cells.clear();
 	clear();                                                 
 	mvprintw(height / 2 - 3, width / 2 - 28, "  ____    _    __  __ _____    _____     _______ ____   ");
 	mvprintw(height / 2 - 2, width / 2 - 28, " / ___|  / \\  |  \\/  | ____|  / _ \\ \\   / | ____|  _ \\  ");
@@ -119,6 +122,13 @@ bool Game_loop::is_alive(Cell const & current_cell) const
 		return false;
 }
 
+void Game_loop::find_dead()
+{
+	for (auto & i : cells)
+		if (!is_alive(i))
+			i.kill();
+}
+
 void Game_loop::push_point(int x, int y)
 {
 	Point tmp(x, y);
@@ -140,51 +150,47 @@ void Game_loop::push_point(int x, int y)
 	point_map.push_back(std::make_pair(1, tmp));
 }
 
-void Game_loop::collect_points(Cell const & current_cell)
+void Game_loop::collect_points()
 {
-	int x = current_cell.get_coord().x;
-	int y = current_cell.get_coord().y;
-
-	if (x > 0)
-		push_point(x - 1, y);
-
-	if (x < width - 1)
-		push_point(x + 1, y);
-
-	if (y > 0)
+	for (auto & i : cells)
 	{
-		push_point(x, y - 1);
-		if (x > 0)
-			push_point(x - 1, y - 1);
-		if (x < width - 1)
-			push_point(x + 1, y - 1);
-	}
+		int x = i.get_coord().x;
+		int y = i.get_coord().y;
 
-	if (y < height - 1)
-	{
-		push_point(x, y + 1);
 		if (x > 0)
-			push_point(x - 1, y + 1);
+			push_point(x - 1, y);
+
 		if (x < width - 1)
-			push_point(x + 1, y + 1);
+			push_point(x + 1, y);
+
+		if (y > 0)
+		{
+			push_point(x, y - 1);
+			if (x > 0)
+				push_point(x - 1, y - 1);
+			if (x < width - 1)
+				push_point(x + 1, y - 1);
+		}
+
+		if (y < height - 1)
+		{
+			push_point(x, y + 1);
+			if (x > 0)
+				push_point(x - 1, y + 1);
+			if (x < width - 1)
+				push_point(x + 1, y + 1);
+		}
 	}
 }
 
+
 void Game_loop::update_population()
 {
-	/*--- Searching for dead and borned cells --- */
-	for (auto & i: cells)
-	{
-		collect_points(i);
-		if (!is_alive(i))
-			i.kill();
-	}
-
 	/* ----- Deleting old cells ----- */
 	for (auto it = cells.begin(); it != cells.end(); )
 	{
 		if ((*it).cell_is_dead())
-			cells.erase(it++ );
+			cells.erase(it++ );  
 		else
 			++it;
 	}
@@ -208,25 +214,21 @@ void Game_loop::init_cells()
 
 void Game_loop::run()
 {
-	int c;
-
 	curs_set(0);
 	input_menu();
 	init_cells();
 
 	while (!cells.empty())
 	{
-		getmaxyx(stdscr, height, width);
-		render();
-		Sleep(1000);
+		std::thread t1(&Game_loop::render, this);			//rendering
+		std::thread t2(&Game_loop::collect_points, this);	//searching new cells
+		std::thread t3(&Game_loop::find_dead, this);		//searching dead cells
+		t1.join();
+		t2.join();
+		t3.join();
 		update_population();
-		c = getch();
-		if (c == 27)
-		{
-			input.clear();
-			cells.clear();
-			game_over();
-		}
+		if (getch() == 27)
+			break;
 	}
 	game_over();
 }
